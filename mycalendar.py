@@ -153,6 +153,49 @@ class Calendar:
         self.conn.commit()
         return json.dumps(retval)
 
+    def organize_meeting(self, interviewee, interviewers):
+        """Organizes a meeting based on the stored available times.
+
+        Parameters
+        ----------
+        interviewee : str
+            ID of the user that must be in the meeting.
+        interviewers : list(str)
+            List of IDs for everyone else who should be in the meeting.
+
+        Returns
+        -------
+        json
+            A JSON object (encoded as string) with three fields: `code`, `data`, and `desc`.
+            `code` is the return code for the operation, `data` is a set of returned time slots
+            for the selected users, and `desc` is a human-readable explanation of the return
+            code, if required.
+        """
+        retval = {'code': 0, 'data': [], 'desc': 'Operation successful'}
+        if not isinstance(interviewers, list):
+            retval = {'code': 1, 'data': [], 'desc': 'Wrong list of interviewers'}
+        elif not isinstance(interviewee, str):
+            retval = {'code': 2, 'data': [], 'desc': 'Wrong interviewee name'}
+        elif len(interviewers) == 0:
+            retval = {'code': 3, 'data': [], 'desc': 'Missing at least one interviewer'}
+        else:
+            aggr_times = dict()
+            common_times = []
+            # Obtain everybody's available slots, and see whether a meeting is possible
+            for person in interviewers+[interviewee]:
+                slots = json.loads(self.get_slots(person))
+                for slot in slots['data']:
+                    if slot not in aggr_times:
+                        aggr_times[slot] = []
+                    aggr_times[slot].append(person)
+            for slot in aggr_times:
+                if len(aggr_times[slot]) == 1+len(interviewers):
+                    common_times.append(slot)
+            retval['data'] = common_times
+            # The data is returned sorted because there's no downside to it
+            retval['data'].sort()
+        return json.dumps(retval)
+
 
 class TestCaseAdd(unittest.TestCase):
     """Tests adding items to the calendar.
@@ -257,6 +300,28 @@ class TestCaseGet(unittest.TestCase):
             retval = json.loads(self.testCal.get_slots(user))
             self.assertEqual(retval['code'], 0, 'Asking about existing slots should succeed')
             self.assertEqual(len(retval['data']), slots, 'The number of slots for \'{}\' is incorrect'.format(user))
+
+    def testWrongMeeting(self):
+        retval = json.loads(self.testCal.organize_meeting('interviewee', []))
+        self.assertNotEqual(retval['code'], 0, 'You should require at least one interviewer')
+        retval = json.loads(self.testCal.organize_meeting('interviewee', 'manager1'))
+        self.assertNotEqual(retval['code'], 0, 'The interviewer cannot be a string. It should be a list.')
+
+    def testMeeting(self):
+        retval = json.loads(self.testCal.organize_meeting('interviewee', ['manager1']))
+        self.assertEqual(len(retval['data']), 16, 'The number of available slots for meeting 1 is incorrect')
+        retval = json.loads(self.testCal.organize_meeting('interviewee', ['manager2']))
+        self.assertEqual(len(retval['data']), 18, 'The number of available slots for meeting 2 is incorrect')
+        retval = json.loads(self.testCal.organize_meeting('interviewee', ['manager3']))
+        self.assertEqual(len(retval['data']), 0, 'The number of available slots for meeting 3 is incorrect')
+        retval = json.loads(self.testCal.organize_meeting('interviewee', ['manager1', 'manager2']))
+        self.assertEqual(len(retval['data']), 12, 'The number of available slots for meeting 4 is incorrect')
+        retval = json.loads(self.testCal.organize_meeting('interviewee', ['manager1', 'manager2', 'manager3']))
+        self.assertEqual(len(retval['data']), 0, 'The number of available slots for meeting 5 is incorrect')
+        # Add an extra slot to make it possible to schedule the meeting
+        self.testCal.add_slots('manager3', datetime(2018, 11, 21, 12), datetime(2018, 11, 21, 13))
+        retval = json.loads(self.testCal.organize_meeting('interviewee', ['manager1', 'manager2', 'manager3']))
+        self.assertEqual(len(retval['data']), 1, 'The number of available slots for meeting 6 is incorrect')
 
 
 if __name__ == '__main__':
