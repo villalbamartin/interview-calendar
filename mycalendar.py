@@ -5,7 +5,7 @@ import os
 import sqlite3
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class Calendar:
@@ -39,6 +39,8 @@ class Calendar:
         """
         # Open the SQLite database
         self.conn = sqlite3.connect(database)
+        # Allow to refer to results via column name rather than just index
+        self.conn.row_factory = sqlite3.Row
         cursor = self.conn.cursor()
         # Enable foreign keys
         cursor.execute("PRAGMA foreign_keys = ON")
@@ -139,10 +141,11 @@ class Calendar:
         data = []
         cursor = self.conn.cursor()
         for row in cursor.execute(self.GET_SLOT_SQL.format(user_id)):
-            print(row)
-            date_from = datetime.strptime(row[1], "%Y-%m-%dT%H:%M:%S.%f")
-            date_to = datetime.strptime(row[2], "%Y-%m-%dT%H:%M:%S.%f")
-            data.append(0)
+            date_from = datetime.strptime(row['date_from'], "%Y-%m-%dT%H:%M:%S")
+            date_to = datetime.strptime(row['date_to'], "%Y-%m-%dT%H:%M:%S")
+            while date_from < date_to:
+                data.append(date_from.isoformat())
+                date_from += timedelta(seconds=3600)
         retval['data'] = data
         return json.dumps(retval)
 
@@ -185,7 +188,7 @@ class TestCaseAddSlots(unittest.TestCase):
         retval = json.loads(self.testCal.add_slots('existing_username', start, end))
         self.assertEqual(retval['code'], 0, 'The \'add_slots\' operation should succeed')
 
-        # Tests whether the 'add_slots' operation actually adds something
+        # Tests whether the 'add_slots' operation actually adds correctly
         retval = json.loads(self.testCal.get_slots('existing_username'))
         slots_before = len(retval['data'])
         start = datetime(2018, 12, 15, 8)
@@ -194,7 +197,7 @@ class TestCaseAddSlots(unittest.TestCase):
         self.assertEqual(retval['code'], 0, 'The \'add_slots\' operation should succeed')
         retval = json.loads(self.testCal.get_slots('existing_username'))
         slots_after = len(retval['data'])
-        self.assertNotEqual(slots_after - slots_before, 0, 'The \'add_slots\' operation is not adding correctly')
+        self.assertEqual(slots_after - slots_before, 13, 'The \'add_slots\' operation is not adding correctly')
 
 
 if __name__ == '__main__':
