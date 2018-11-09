@@ -42,11 +42,12 @@ class Calendar:
         # Allow to refer to results via column name rather than just index
         self.conn.row_factory = sqlite3.Row
         cursor = self.conn.cursor()
-        # Enable foreign keys
+        # Enables foreign keys, if possible
         cursor.execute("PRAGMA foreign_keys = ON")
         # If the database is empty, we create the required tables
         cursor.execute(self.INIT_DB_SQL1)
         cursor.execute(self.INIT_DB_SQL2)
+        self.conn.commit()
 
     def add_user(self, user_id, name):
         """Adds a new user to the database.
@@ -69,6 +70,7 @@ class Calendar:
         cursor = self.conn.cursor()
         try:
             cursor.execute(self.ADD_USER_SQL.format(user_id, name))
+            self.conn.commit()
         except sqlite3.IntegrityError:
             retval = {'code': 1, 'desc': 'Cannot add user: user already exists'}
 
@@ -115,7 +117,9 @@ class Calendar:
             # Add the new slot
             cursor = self.conn.cursor()
             try:
+                print(self.ADD_SLOT_SQL.format(user_id, slot_from.isoformat(), slot_to.isoformat()))
                 cursor.execute(self.ADD_SLOT_SQL.format(user_id, slot_from.isoformat(), slot_to.isoformat()))
+                self.conn.commit()
             except sqlite3.IntegrityError:
                 retval = {'code': 3, 'desc': 'Cannot add slot: integrity error'}
 
@@ -147,11 +151,15 @@ class Calendar:
                 data.append(date_from.isoformat())
                 date_from += timedelta(seconds=3600)
         retval['data'] = data
+        self.conn.commit()
         return json.dumps(retval)
 
 
-class TestCaseAddSlots(unittest.TestCase):
-    """Tests adding items to the calendar."""
+class TestCaseAdd(unittest.TestCase):
+    """Tests adding items to the calendar.
+    By necessity, this class also tests whether it's possible to add a user,
+    since there is no way to test any kind of insertion.
+    """
     def setUp(self):
         # Setting these tests up includes creating an empty database and one user
         self.new_db = tempfile.NamedTemporaryFile(delete=False)
@@ -162,8 +170,12 @@ class TestCaseAddSlots(unittest.TestCase):
         # Delete the temporary database
         os.unlink(self.new_db.name)
 
-    def testAdd(self):
-        # Test all kind of wrong arguments
+    def testAddSlots(self):
+        """Tests whether adding elements to the database works."""
+        # Note that `setUp` is already testing whether adding a user works,
+        # or otherwise most examples here would fail
+
+        # Test all kind of wrong arguments for 'add_slots'
         all_args = ['2018/12/12 06:20', 12, None, 12.21, datetime.now()]
         for user in all_args:
             for start in all_args:
@@ -174,7 +186,7 @@ class TestCaseAddSlots(unittest.TestCase):
                         retval = json.loads(self.testCal.add_slots(user, start, end))
                         self.assertNotEqual(retval['code'], 0, '\'add_slots\' is not validating arguments correctly')
 
-        # Tests for an empty range
+        # Tests for an empty range when adding slots
         start = datetime(2018, 12, 15, 13)
         end = datetime(2018, 12, 15, 14)
         retval = json.loads(self.testCal.add_slots('existing_username', start, start))
@@ -182,7 +194,7 @@ class TestCaseAddSlots(unittest.TestCase):
         retval = json.loads(self.testCal.add_slots('existing_username', end, start))
         self.assertNotEqual(retval['code'], 0, '\'add_slots\' is allowing empty ranges')
 
-        # Tests a valid interval
+        # Tests a valid interval for slots
         start = datetime(2018, 12, 15, 13)
         end = datetime(2018, 12, 15, 14)
         retval = json.loads(self.testCal.add_slots('existing_username', start, end))
@@ -199,10 +211,18 @@ class TestCaseAddSlots(unittest.TestCase):
         slots_after = len(retval['data'])
         self.assertEqual(slots_after - slots_before, 13, 'The \'add_slots\' operation is not adding correctly')
 
+        # Tests whether it's possible to add a slot for a user that doesn't exist
+        retval = json.loads(self.testCal.get_slots('random_username'))
+        self.assertEqual(retval['code'], 0, 'Asking about a non-existent user should succeed')
+        start = datetime(2018, 12, 15, 8)
+        end = datetime(2018, 12, 15, 21)
+        retval = json.loads(self.testCal.add_slots('random_username', start, end))
+        self.assertNotEqual(retval['code'], 0, 'Adding slots to a non-existent user should not succeed')
+
 
 if __name__ == '__main__':
     # Run all test cases
     suite_loader = unittest.TestLoader()
-    suite1 = suite_loader.loadTestsFromTestCase(TestCaseAddSlots)
+    suite1 = suite_loader.loadTestsFromTestCase(TestCaseAdd)
     suite = unittest.TestSuite([suite1])
     unittest.TextTestRunner(verbosity=2).run(suite)
