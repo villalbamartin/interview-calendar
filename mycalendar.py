@@ -117,7 +117,6 @@ class Calendar:
             # Add the new slot
             cursor = self.conn.cursor()
             try:
-                print(self.ADD_SLOT_SQL.format(user_id, slot_from.isoformat(), slot_to.isoformat()))
                 cursor.execute(self.ADD_SLOT_SQL.format(user_id, slot_from.isoformat(), slot_to.isoformat()))
                 self.conn.commit()
             except sqlite3.IntegrityError:
@@ -220,9 +219,50 @@ class TestCaseAdd(unittest.TestCase):
         self.assertNotEqual(retval['code'], 0, 'Adding slots to a non-existent user should not succeed')
 
 
+class TestCaseGet(unittest.TestCase):
+    """Tests querying items from the calendar.
+    By necessity, this class also tests whether it's possible to add items,
+    or the database would be empty for all queries.
+    """
+    def setUp(self):
+        # Setting these tests up includes creating a simple database and some users
+        self.new_db = tempfile.NamedTemporaryFile(delete=False)
+        self.testCal = Calendar(self.new_db.name)
+        self.testCal.add_user('manager1', 'Manager 1')
+        self.testCal.add_user('manager2', 'Manager 2')
+        self.testCal.add_user('manager3', 'Manager 3')
+        self.testCal.add_user('interviewee', 'Interview Candidate')
+
+        # 2018/11/19 is Monday. Putting all examples in the same week to make them easier
+        # to understand and debug
+        self.testCal.add_slots('manager1', datetime(2018, 11, 19, 8), datetime(2018, 11, 19, 18))
+        self.testCal.add_slots('manager1', datetime(2018, 11, 21, 8), datetime(2018, 11, 21, 18))
+        self.testCal.add_slots('manager1', datetime(2018, 11, 23, 8), datetime(2018, 11, 23, 18))
+        self.testCal.add_slots('manager2', datetime(2018, 11, 19, 11), datetime(2018, 11, 19, 21))
+        self.testCal.add_slots('manager2', datetime(2018, 11, 20, 11), datetime(2018, 11, 20, 21))
+        self.testCal.add_slots('manager2', datetime(2018, 11, 21, 11), datetime(2018, 11, 21, 21))
+        self.testCal.add_slots('manager2', datetime(2018, 11, 22, 11), datetime(2018, 11, 22, 13))
+        self.testCal.add_slots('manager3', datetime(2018, 11, 22, 16), datetime(2018, 11, 23, 18))
+        self.testCal.add_slots('interviewee', datetime(2018, 11, 19, 9), datetime(2018, 11, 19, 17))
+        self.testCal.add_slots('interviewee', datetime(2018, 11, 20, 9), datetime(2018, 11, 20, 17))
+        self.testCal.add_slots('interviewee', datetime(2018, 11, 21, 9), datetime(2018, 11, 21, 17))
+
+    def tearDown(self):
+        # Delete the temporary database
+        os.unlink(self.new_db.name)
+
+    def testCorrectlyAdded(self):
+        all_slots = [('manager1', 30), ('manager2', 32), ('manager3', 26), ('interviewee', 24)]
+        for user, slots in all_slots:
+            retval = json.loads(self.testCal.get_slots(user))
+            self.assertEqual(retval['code'], 0, 'Asking about existing slots should succeed')
+            self.assertEqual(len(retval['data']), slots, 'The number of slots for \'{}\' is incorrect'.format(user))
+
+
 if __name__ == '__main__':
     # Run all test cases
     suite_loader = unittest.TestLoader()
     suite1 = suite_loader.loadTestsFromTestCase(TestCaseAdd)
-    suite = unittest.TestSuite([suite1])
+    suite2 = suite_loader.loadTestsFromTestCase(TestCaseGet)
+    suite = unittest.TestSuite([suite1, suite2])
     unittest.TextTestRunner(verbosity=2).run(suite)
