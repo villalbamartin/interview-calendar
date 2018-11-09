@@ -34,8 +34,13 @@ class Calendar:
         is willing to start the meeting anytime from 16:00 to 20:00, then `slot_to` should
         have a value of 21:00.
         """
-        retval = {'code' : 0, 'desc': 'Operation successful'}
+        retval = {'code': 0, 'desc': 'Operation successful'}
+        if not(isinstance(user_id, str) and isinstance(slot_from, datetime) and isinstance(slot_to, datetime)):
+            retval['code'] = 1
+            retval['desc'] = 'Error in add: parameters of wrong type'
+
         return json.dumps(retval)
+    
 
 class TestCaseAdd(unittest.TestCase):
     """Tests adding items to the calendar."""
@@ -54,8 +59,8 @@ class TestCaseAdd(unittest.TestCase):
         # Test all kind of wrong arguments
         all_args = ['2018/12/12 06:20', 12, None, 12.21, datetime.now()]
         for user in all_args:
-            for start in [None, 14, 3.5, '2018/12/12 06:20', datetime.now()]:
-                for end in [None, 14, 3.5, '2018/12/12 06:20']:
+            for start in all_args:
+                for end in all_args:
                     if not (isinstance(user, str) and isinstance(start, datetime) and isinstance(end, datetime)):
                         retval = json.loads(self.testCal.add(user, start, end))
                         self.assertNotEquals(retval['code'], 0, '\'add\' is not validating its arguments correctly')
