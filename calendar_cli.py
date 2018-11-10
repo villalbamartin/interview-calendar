@@ -28,13 +28,13 @@ if args.add_user:
     # Add a user to the database
     retval = json.loads(cal.add_user(args.add_user[0], args.add_user[1]))
     if retval['code'] != 0:
-        sys.stderr.write("Error adding user: {}".format(retval['desc']))
+        print("Error adding user: {}".format(retval['desc']), file=sys.stderr)
 elif args.add_slot:
     # Add a slot to the database
     # TODO: make it easier to enter a date
     retval = json.loads(cal.add_slots(args.add_slot[0], args.add_slot[1], args.add_slot[2]))
     if retval['code'] != 0:
-        sys.stderr.write("Error adding user: {}".format(retval['desc']))
+        print("Error adding user: {}".format(retval['desc']), file=sys.stderr)
 elif args.see_slots:
     # Query available slots for a specific user
     retval = json.loads(cal.get_slots (args.see_slots))
@@ -42,7 +42,7 @@ elif args.see_slots:
         for slot in retval['data']:
             print(slot)
     else:
-        sys.stderr.write("Error querying slots: {}".format(retval['desc']))
+        print("Error querying slots: {}".format(retval['desc']), file=sys.stderr)
 elif args.meeting_members:
     # Organize a meeting with a list of members
     retval = json.loads(cal.organize_meeting(args.meeting_members[0], args.meeting_members[1:]))
@@ -53,4 +53,4 @@ elif args.meeting_members:
             for slot in retval['data']:
                 print(slot)
     else:
-        sys.stderr.write("Error querying meeting user: {}".format(retval['desc']))
+        print("Error querying meeting user: {}".format(retval['desc']), file=sys.stderr)
