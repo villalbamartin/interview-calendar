@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import dateutil.parser
 import sys
 from backend import Calendar
 
@@ -34,9 +35,11 @@ if args.add_user:
 elif args.add_slot:
     # Add a slot to the database
     # TODO: make it easier to enter a date
-    retval = cal.add_slots(args.add_slot[0], args.add_slot[1], args.add_slot[2])
+    retval = cal.add_slots(args.add_slot[0],
+                           dateutil.parser.parse(args.add_slot[1]),
+                           dateutil.parser.parse(args.add_slot[2]))
     if retval['code'] != 0:
-        print("Error adding user: {}".format(retval['desc']), file=sys.stderr)
+        print("Error adding slot: {}".format(retval['desc']), file=sys.stderr)
 elif args.see_slots:
     # Query available slots for a specific user
     retval = cal.get_slots (args.see_slots)

@@ -37,7 +37,8 @@ class Calendar:
             A filename with the database connection string.
         """
         # Open the SQLite database
-        self.conn = sqlite3.connect(database)
+        # TODO: This may not be thread-safe yet!
+        self.conn = sqlite3.connect(database, check_same_thread=False)
         # Allow to refer to results via column name rather than just index
         self.conn.row_factory = sqlite3.Row
         cursor = self.conn.cursor()
@@ -61,11 +62,11 @@ class Calendar:
         Returns
         -------
         dict
-            A dictionary containing a pair of fields, `code` and `desc`. `code` is the return value (0 = success), and `desc` is
-            a human-readable explanation of the return value.
+            A dictionary containing a pair of fields, `code` and `desc`. `code` is the return value (0 = success),
+            and `desc` is a human-readable explanation of the return value.
         """
         cursor = self.conn.cursor()
-        retval = {'code' : 0, 'desc': 'Operation successful'}
+        retval = {'code': 0, 'desc': 'Operation successful'}
         try:
             cursor.execute(self.ADD_USER_SQL.format(user_id, name))
             self.conn.commit()
@@ -91,8 +92,8 @@ class Calendar:
         Returns
         -------
         dict
-            A dictionary containing a pair of fields, `code` and `desc``. `code` is the return value (0 = success), and `desc` is
-            a human-readable explanation of the return value.
+            A dictionary containing a pair of fields, `code` and `desc``. `code` is the return value (0 = success),
+            and `desc` is a human-readable explanation of the return value.
 
         Notes
         -----
