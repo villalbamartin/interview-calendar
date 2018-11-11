@@ -6,13 +6,14 @@ the instructions here will remain vague enough as to be unsearchable. Sorry!
 
 ## Requirements
   * The API web interface is provided using Flask and Flask-restful.
-  * The database backend is currently implemented with SQLite.
+  * The database backend is currently implemented with SQLite3.
 
 ## Running from the command line
 The API can be accessed directly from the command line, or via web.
 To run the API from the command line, run `calendar_cli.py` with one of the following options:
 
   * `--add_user <user_id> <full name>` adds a user to the database
+  * `--get_user <uder_id>` returns the full name of the given username
   * `--add_slot <user_id> <from> <to>` adds a slot to the selected user
   * `--see_slots <user_id>` shows all slots for a user
   * `--meeting <user_id> <user_id> ...` calculates a meeting across the given users
