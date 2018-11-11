@@ -5,24 +5,31 @@ from backend import Calendar
 from flask import Flask, request
 from flask_restful import Resource, Api
 
-
-# To run: FLASK_APP=flask_server.py python3 -m flask run --host=0.0.0.0
 app = Flask(__name__)
 api = Api(app)
-cal = Calendar('database.db')
+DATABASE = 'database.db'
 
-class Person(Resource):
+
+class People(Resource):
+    def get(self, user_id):
+        cal = Calendar(DATABASE)
+        retval = cal.get_user(user_id)
+        return retval
+
     def post(self, user_id):
+        cal = Calendar(DATABASE)
         name = request.form.get('name')
         return cal.add_user(user_id, name)
 
 
 class Slots(Resource):
     def get(self, user_id):
+        cal = Calendar(DATABASE)
         retval = cal.get_slots(user_id)
         return retval
 
     def post(self, user_id):
+        cal = Calendar(DATABASE)
         date_from = request.form.get('from')
         date_to = request.form.get('to')
         return cal.add_slots(user_id,
@@ -32,12 +39,13 @@ class Slots(Resource):
 
 class Meeting(Resource):
     def get(self, user_ids):
+        cal = Calendar(DATABASE)
         users = user_ids.split(',')
         retval = cal.organize_meeting(users[0], users[1:])
         return retval
 
 
-api.add_resource(Person, '/person/<user_id>')
+api.add_resource(People, '/people/<user_id>')
 api.add_resource(Slots, '/slots/<user_id>')
 api.add_resource(Meeting, '/meeting/<user_ids>')
 

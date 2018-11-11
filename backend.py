@@ -25,6 +25,7 @@ class Calendar:
                    "username TEXT NOT NULL, date_from TEXT NOT NULL, date_to TEXT NOT NULL," \
                    "FOREIGN KEY(username) REFERENCES people(username));"
     ADD_USER_SQL = "INSERT INTO people VALUES ('{}','{}');"
+    GET_USER_SQL = "SELECT * FROM people WHERE username = '{}';"
     ADD_SLOT_SQL = "INSERT INTO slots VALUES('{}','{}','{}');"
     GET_SLOT_SQL = "SELECT * FROM slots WHERE username = '{}';"
 
@@ -37,8 +38,7 @@ class Calendar:
             A filename with the database connection string.
         """
         # Open the SQLite database
-        # TODO: This may not be thread-safe yet!
-        self.conn = sqlite3.connect(database, check_same_thread=False)
+        self.conn = sqlite3.connect(database)
         # Allow to refer to results via column name rather than just index
         self.conn.row_factory = sqlite3.Row
         cursor = self.conn.cursor()
@@ -75,6 +75,27 @@ class Calendar:
             retval['desc'] = 'Cannot add user: user already exists'
         return retval
 
+    def get_user(self, user_id):
+        """Returns the name associated to a user id.
+
+        Parameters
+        ----------
+        user_id : str
+            The ID of the user whose name we want to know.
+
+        Returns
+        -------
+        dict
+            A dictionary containing a triple of fields, `code`, `desc`, and `data. `code` is the return
+            value (0 = success), `desc` is a human-readable explanation of the return value, and `data` is the
+            requested data (namely, the user name).
+        """
+        cursor = self.conn.cursor()
+        retval = {'code': 0, 'desc': 'Operation successful', 'data': ""}
+        for row in cursor.execute(self.GET_USER_SQL.format(user_id)):
+            retval['data'] = row['name']
+        return retval
+
     def add_slots(self, user_id, slot_from, slot_to):
         """Adds a slot for the given user id.
 
@@ -92,7 +113,7 @@ class Calendar:
         Returns
         -------
         dict
-            A dictionary containing a pair of fields, `code` and `desc``. `code` is the return value (0 = success),
+            A dictionary containing a pair of fields, `code` and `desc`. `code` is the return value (0 = success),
             and `desc` is a human-readable explanation of the return value.
 
         Notes

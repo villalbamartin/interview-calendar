@@ -27,7 +27,7 @@ For simple GET requests, you can access the server via your browser. Simply star
 
 and navigate to `http://localhost:5000` with one of the following endpoints:
 
-  * `/person/<user_id>` returns information about a given user
+  * `/people/<user_id>` returns information about a given user
   * `/slots/<user_id>` returns the available slots of a given user
   * `/meeting/<user_1>,<user_2>,...` returns the possible times for a meeting with the comma-separated
     list of participants
