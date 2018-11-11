@@ -314,6 +314,10 @@ class TestCaseGet(unittest.TestCase):
         os.unlink(self.new_db.name)
 
     def testCorrectlyAdded(self):
+        # Test whether a user's name was inserted correctly
+        retval = self.testCal.get_user('manager1')
+        self.assertEqual(retval['data'], 'Manager 1', 'The name of manager1 is not correct')
+        # Test whether the number of slots for each user are correct
         all_slots = [('manager1', 30), ('manager2', 32), ('manager3', 26), ('interviewee', 24)]
         for user, slots in all_slots:
             retval = self.testCal.get_slots(user)

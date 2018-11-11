@@ -16,6 +16,8 @@ parser = argparse.ArgumentParser(description='Performs queries to the calendar A
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument('--add_user', dest='add_user', metavar=('USER_ID','NAME'), nargs=2,
                    help='Add a user to the database')
+group.add_argument('--get_user', dest='get_user', metavar='USER_ID',
+                   help='Get the name of a user in the database')
 group.add_argument('--add_slot', dest='add_slot', metavar=('USER_ID','FROM', 'TO'), nargs=3,
                    help='Add a range of slots to the database')
 group.add_argument('--see_slots', dest='see_slots', metavar='USER_ID',
@@ -32,6 +34,13 @@ if args.add_user:
     retval = cal.add_user(args.add_user[0], args.add_user[1])
     if retval['code'] != 0:
         print("Error adding user: {}".format(retval['desc']), file=sys.stderr)
+elif args.get_user:
+    # Show the name of a user
+    retval = cal.get_user(args.get_user)
+    if retval['data'] != '':
+        print(retval['data'])
+    else:
+        print("User not found", file=sys.stderr)
 elif args.add_slot:
     # Add a slot to the database
     retval = cal.add_slots(args.add_slot[0],
